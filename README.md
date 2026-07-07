@@ -6,6 +6,16 @@ Picasso is a modern, compiled programming language designed for myself.
 
 Picasso combines the performance of compiled languages with the ease of use of modern high-level languages. It features automatic memory management, built-in concurrency primitives, and a rich standard library while maintaining zero-cost abstractions.
 
+## Table of Contents
+
+- [Key Features](#key-features)
+- [Building from Source](#building-from-source)
+- [Syntax Examples](#syntax-examples)
+- [Variable Declaration](#variable-declaration)
+- [Access Modifiers](#access-modifiers)
+- [Built-in Libraries](#built-in-libraries)
+- [Citation](#citation)
+
 ## Key Features
 
 - **Compiled Native Code**: Direct compilation to native machine code without virtual machine overhead.
@@ -27,6 +37,83 @@ Picasso combines the performance of compiled languages with the ease of use of m
 - **Cross-Platform Support**: Linux and macOS on aarch64/arm64 architectures.
 
 - **Comprehensive Standard Library**: Network I/O, file I/O, OS integration, synchronization primitives, string manipulation, and array operations.
+
+---
+
+## Building from Source
+
+> **Platform:** macOS (arm64 / Apple Silicon)
+
+### Prerequisites
+
+| Tool | Version | Install |
+|---|---|---|
+| Xcode Command Line Tools | latest | `xcode-select --install` |
+| Go | ≥ 1.24.5 | `brew install go` |
+| libffi | any | `brew install libffi` |
+| Bazelisk | latest | `brew install bazelisk` |
+
+Bazelisk automatically selects **Bazel 8.5.1** (pinned in `.bazelversion`). Always run Bazel commands from inside the `picasso/` directory so Bazelisk picks up the correct version.
+
+### 1. Clone and enter the workspace
+
+```bash
+git clone https://github.com/nagarajRPoojari/picasso.git
+cd picasso
+```
+
+### 2. Build
+
+```bash
+bazel build //cli:picasso
+```
+
+This compiles three components in one step:
+
+| Output | Path under `bazel-bin/` | Description |
+|---|---|---|
+| `picasso` | `cli/picasso` | Compiler CLI |
+| `irgen` | `irgen/irgen_/irgen` | IR generator (Go) |
+| `libruntime_lib.a` | `libruntime_lib.a` | Runtime static library (C) |
+
+### 3. Package
+
+```bash
+./build.sh v1.0.2
+# → dist/picasso_v1.0.2_darwin_arm64.tar.gz
+```
+
+### 4. Install
+
+```bash
+VERSION="v1.0.2"
+PKG="dist/picasso_${VERSION}_darwin_arm64"
+
+sudo cp "$PKG/picasso"          /usr/local/bin/picasso
+sudo cp "$PKG/irgen"            /usr/local/bin/irgen
+
+sudo mkdir -p /usr/local/lib/picasso
+sudo cp    "$PKG/libruntime_lib.a"  /usr/local/lib/picasso/
+sudo cp -R "$PKG/libs"              /usr/local/lib/picasso/
+sudo cp -R "$PKG/runtime"           /usr/local/lib/picasso/
+```
+
+### 5. Verify
+
+```bash
+picasso --help
+```
+
+### Troubleshooting
+
+| Error | Cause | Fix |
+|---|---|---|
+| Bazel downloads wrong version (e.g. 9.x) | Running `bazel` from the wrong directory | `cd picasso` first; Bazelisk reads `.bazelversion` only from the cwd |
+| Stale Go toolchain path after `brew upgrade` | Bazel cached a path that no longer exists | `bazel clean --expunge` then rebuild |
+| `go: unknown GOEXPERIMENT coverageredesign` | `go_sdk.host()` pairs a new system Go with rules_go's old builder binary | Use `go_sdk.download(version = "1.24.5")` in `MODULE.bazel` so rules_go downloads a matched SDK |
+| `ld: library 'ffi' not found` | libffi not installed | `brew install libffi` |
+
+---
 
 ## Syntax Examples
 
@@ -329,15 +416,18 @@ class Example {
 - **types**: Type conversion and type-related utilities.
 
 
-# cite 
-```
+---
+
+## Citation
+
+```bibtex
 @software{Poojari_Picasso_A_lightweight_2026,
-author = {Poojari, Nagaraj},
-doi = {10.5281/zenodo.20106946.},
-month = may,
-title = {{Picasso: A lightweight programming language for modern workloads}},
-url = {https://github.com/nagarajRPoojari/picasso},
-version = {1.0.0},
-year = {2026}
+  author  = {Poojari, Nagaraj},
+  doi     = {10.5281/zenodo.20106946.},
+  month   = may,
+  title   = {{Picasso: A lightweight programming language for modern workloads}},
+  url     = {https://github.com/nagarajRPoojari/picasso},
+  version = {1.0.0},
+  year    = {2026}
 }
 ```
