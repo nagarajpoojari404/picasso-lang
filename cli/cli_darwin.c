@@ -517,7 +517,6 @@ int main(int argc, char **argv) {
         char link_cmd[PATH_MAX * 3];
         char runtimeLib[PATH_MAX];
         get_runtimelib(runtimeLib, sizeof(runtimeLib));
-        const char *clang_for_link = find_clang();
         snprintf(link_cmd, sizeof(link_cmd),
             "set -e; "
             "OBJS=$1/*.o; "
@@ -525,14 +524,14 @@ int main(int argc, char **argv) {
             "if [ -d \"$1/tmp/ffi-obj\" ] && ls \"$1/tmp/ffi-obj\"/*.o >/dev/null 2>&1; then "
             "  FFI_OBJS=$1/tmp/ffi-obj/*.o; "
             "fi; "
-            "\"%s\" $OBJS $FFI_OBJS "
+            "cc $OBJS $FFI_OBJS "
             "-isysroot %s "
             "%s"
             " -o $1/a.out "
             " -rdynamic "
             " -I%s "
             " -lffi -lpthread -lm",
-            clang_for_link, sdk, runtimeLib, ffi_include);
+            sdk, runtimeLib, ffi_include);
         
         char *link[] = {
             "sh", "-c",
