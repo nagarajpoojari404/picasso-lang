@@ -9,6 +9,7 @@ Picasso combines the performance of compiled languages with the ease of use of m
 ## Table of Contents
 
 - [Key Features](#key-features)
+- [Installation via Homebrew](#installation-via-homebrew)
 - [Building from Source](#building-from-source)
 - [Syntax Examples](#syntax-examples)
 - [Variable Declaration](#variable-declaration)
@@ -37,6 +38,56 @@ Picasso combines the performance of compiled languages with the ease of use of m
 - **Cross-Platform Support**: Linux and macOS on aarch64/arm64 architectures.
 
 - **Comprehensive Standard Library**: Network I/O, file I/O, OS integration, synchronization primitives, string manipulation, and array operations.
+
+---
+
+## Installation via Homebrew
+
+The easiest way to install Picasso on macOS (Apple Silicon / arm64).
+
+### Prerequisites
+
+- macOS with Apple Silicon (arm64)
+- [Homebrew](https://brew.sh) installed
+- Xcode Command Line Tools — install or update with:
+  ```zsh
+  xcode-select --install
+  ```
+
+### Install
+
+```zsh
+brew install nagarajRPoojari/picasso/picasso
+```
+
+This single command taps the formula, downloads the pre-built binary, and places all components in the right locations:
+
+| Component | Installed path |
+|---|---|
+| `picasso` CLI | `/opt/homebrew/bin/picasso` |
+| `irgen` (IR generator) | `/opt/homebrew/bin/irgen` |
+| Runtime library | `/opt/homebrew/lib/picasso/libruntime_lib.a` |
+| Standard library headers | `/opt/homebrew/lib/picasso/libs/` |
+| Runtime headers | `/opt/homebrew/lib/picasso/runtime/` |
+
+### Verify
+
+```zsh
+picasso --help
+```
+
+### Upgrade
+
+```zsh
+brew upgrade nagarajRPoojari/picasso/picasso
+```
+
+### Uninstall
+
+```zsh
+brew uninstall picasso
+brew untap nagarajRPoojari/picasso   # optional, removes the tap
+```
 
 ---
 
@@ -112,6 +163,29 @@ picasso --help
 | Stale Go toolchain path after `brew upgrade` | Bazel cached a path that no longer exists | `bazel clean --expunge` then rebuild |
 | `go: unknown GOEXPERIMENT coverageredesign` | `go_sdk.host()` pairs a new system Go with rules_go's old builder binary | Use `go_sdk.download(version = "1.24.5")` in `MODULE.bazel` so rules_go downloads a matched SDK |
 | `ld: library 'ffi' not found` | libffi not installed | `brew install libffi` |
+| `fatal error: 'signal.h' file not found` | macOS SDK path changed after a CLT/Xcode update; LLVM 14 can't locate system headers | See below |
+
+#### `signal.h` not found after CLT update
+
+This occurs when the macOS Command Line Tools or Xcode are updated and the SDK path shifts — LLVM 14's clang no longer finds standard system headers automatically.
+
+**Permanent fix (already baked into the binary as of v1.0.7):** `picasso` now resolves the SDK via `xcrun --sdk macosx --show-sdk-path` at build time and passes `-isysroot` to clang automatically.
+
+**Workaround for older installed versions:** set `SDKROOT` before running `picasso`:
+
+```zsh
+export SDKROOT=$(xcrun --show-sdk-path)
+picasso build <project-dir>
+```
+
+You can also pin a specific SDK path permanently:
+
+```zsh
+export PICASSO_SDK_PATH=$(xcrun --show-sdk-path)
+picasso build <project-dir>
+```
+
+Add either export to your `~/.zshrc` to make it persistent. The recommended fix is to upgrade to the latest `picasso` release via `brew upgrade nagarajRPoojari/picasso/picasso`.
 
 ---
 

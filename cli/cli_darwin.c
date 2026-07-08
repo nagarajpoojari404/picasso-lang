@@ -270,13 +270,15 @@ static void generate_ffi_irs_from_root( const char *ffiRoot, const char *tmpDir,
         char ffi_include[PATH_MAX];
         snprintf(ffi_include, sizeof(ffi_include), "%s/usr/include/ffi", sdk);
 
-        char *clang_ll[24];
+        char *clang_ll[28];
         int i = 0;
 
         clang_ll[i++] = (char *)clang;
         clang_ll[i++] = "-S";
         clang_ll[i++] = "-emit-llvm";
         clang_ll[i++] = "-g";
+        clang_ll[i++] = "-isysroot";
+        clang_ll[i++] = (char *)sdk;
 
         if (runtimeIncDir) {
             clang_ll[i++] = "-I";
@@ -364,13 +366,50 @@ static void generate_ffi_irs(const char *dir, const char *buildDir) {
     );
 }
 
+static void print_help(void) {
+    printf("picasso - Picasso language compiler and build tool\n\n");
+    printf("Usage:\n");
+    printf("  picasso build <project-dir>   Compile a Picasso project\n");
+    printf("  picasso exec  <project-dir>   Run the built project executable\n");
+    printf("  picasso clean <project-dir>   Remove build artifacts\n\n");
+    printf("Flags:\n");
+    printf("  --help       Show this help message\n");
+    printf("  --version    Show version information\n\n");
+    printf("Environment variables (set automatically by brew):\n");
+    printf("  PICASSO_HOME         Runtime and stdlib root directory\n");
+    printf("  PICASSO_IRGEN        Path to the IR generator binary\n");
+    printf("  PICASSO_RUNTIME_LIB  Path to the runtime static library\n");
+    printf("  PICASSO_CLANG        Clang binary used for FFI compilation\n");
+    printf("  PICASSO_SDK_PATH     macOS SDK root (overrides xcrun detection)\n");
+    printf("  PICASSO_VERSION      Installed version\n");
+}
+
+static void print_version(void) {
+    const char *ver = getenv("PICASSO_VERSION");
+    if (ver && ver[0] != '\0') {
+        printf("picasso %s\n", ver);
+    } else {
+        printf("picasso (version unknown)\n");
+    }
+}
+
 /* main */
 int main(int argc, char **argv) {
     init_logging();
 
     if (argc < 2) {
-        log(LOG_ERROR, "usage: picasso <build|exec|clean> <project-dir>");
+        print_help();
         return 1;
+    }
+
+    if (!strcmp(argv[1], "--help") || !strcmp(argv[1], "-h")) {
+        print_help();
+        return 0;
+    }
+
+    if (!strcmp(argv[1], "--version") || !strcmp(argv[1], "-v")) {
+        print_version();
+        return 0;
     }
 
     if (!strcmp(argv[1], "build")) {
@@ -535,6 +574,6 @@ int main(int argc, char **argv) {
         return 0;
     }
 
-    log(LOG_ERROR, "unknown command: %s", argv[1]);
+    log(LOG_ERROR, "unknown command: %s. Run 'picasso --help' for usage.", argv[1]);
     return 1;
 }
