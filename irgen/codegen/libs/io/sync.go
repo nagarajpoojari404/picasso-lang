@@ -33,13 +33,19 @@ func (t *SyncIO) ListAllFuncs() map[string]function.Func {
 }
 
 func (t *SyncIO) sprintf(f *ir.Func, typeHandler *typedef.TypeHandler, module *ir.Module, bh *bc.BlockHolder, args []typedef.Var) typedef.Var {
-	// Format string is %string* in irgen but FFI expects %struct.__public__string_t* — bitcast via i8*
+	// printf's first arg is always a Picasso string (%string*) but the FFI declaration uses
+	// %struct.__public__string_t*. Bitcast through i8* to satisfy llvm-as cross-module type check.
 	fmtVal := args[0].Load(bh)
 	if f != nil && len(f.Sig.Params) > 0 {
-		if expected := f.Sig.Params[0]; expected.String() != fmtVal.Type().String() {
+		expected := f.Sig.Params[0]
+		if expected.String() != fmtVal.Type().String() {
 			fmtVal = bh.N.NewBitCast(fmtVal, types.I8Ptr)
 			fmtVal = bh.N.NewBitCast(fmtVal, expected)
 		}
+	} else if _, isPtr := fmtVal.Type().(*types.PointerType); isPtr {
+		// f is nil when syncio is an overridden stdlib module (not in FFIModules).
+		// Still need to bitcast %string* → i8* so the variadic call is type-safe.
+		fmtVal = bh.N.NewBitCast(fmtVal, types.I8Ptr)
 	}
 	castedArgs := []value.Value{fmtVal} // The Format String
 
