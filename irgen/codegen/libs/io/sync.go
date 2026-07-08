@@ -33,7 +33,15 @@ func (t *SyncIO) ListAllFuncs() map[string]function.Func {
 }
 
 func (t *SyncIO) sprintf(f *ir.Func, typeHandler *typedef.TypeHandler, module *ir.Module, bh *bc.BlockHolder, args []typedef.Var) typedef.Var {
-	castedArgs := []value.Value{args[0].Load(bh)} // The Format String
+	// Format string is %string* in irgen but FFI expects %struct.__public__string_t* — bitcast via i8*
+	fmtVal := args[0].Load(bh)
+	if f != nil && len(f.Sig.Params) > 0 {
+		if expected := f.Sig.Params[0]; expected.String() != fmtVal.Type().String() {
+			fmtVal = bh.N.NewBitCast(fmtVal, types.I8Ptr)
+			fmtVal = bh.N.NewBitCast(fmtVal, expected)
+		}
+	}
+	castedArgs := []value.Value{fmtVal} // The Format String
 
 	for _, arg := range args[1:] {
 		val := arg.Load(bh)

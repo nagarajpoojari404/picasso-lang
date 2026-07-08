@@ -41,6 +41,23 @@ func CallCFunc(typeHandler *typedef.TypeHandler, f *ir.Func, bh *bc.BlockHolder,
 			}
 		}
 
+		// Handle cross-module struct pointer mismatch: irgen names types (e.g. %string*) while
+		// clang-generated FFI modules use full struct names (e.g. %struct.__public__string_t*).
+		// They are the same layout but different LLVM type names across modules — bitcast via i8*
+		// to avoid llvm-as type mismatch errors.
+		if expPtr, expIsPtr := expected.(*types.PointerType); expIsPtr {
+			if _, expElemIsStruct := expPtr.ElemType.(*types.StructType); expElemIsStruct {
+				if argPtr, argIsPtr := argVal.Type().(*types.PointerType); argIsPtr {
+					if _, argElemIsStruct := argPtr.ElemType.(*types.StructType); argElemIsStruct {
+						if expected.String() != argVal.Type().String() {
+							argVal = bh.N.NewBitCast(argVal, types.I8Ptr)
+							argVal = bh.N.NewBitCast(argVal, expected)
+						}
+					}
+				}
+			}
+		}
+
 		// Apply implicit type casting
 		argVal = typeHandler.ImplicitTypeCast(bh, utils.GetTypeString(expected), argVal)
 		castedArgs = append(castedArgs, argVal)
