@@ -321,11 +321,13 @@ static void generate_ffi_irs_from_root( const char *ffiRoot, const char *tmpDir,
             if (snprintf(obj, sizeof(obj), "%s/%s_%s.o", ffiObjDir, ent->d_name, cent->d_name) >= (int)sizeof(obj))
                 die("obj path too long");
 
-            char *cc_obj[16];
+            char *cc_obj[20];
             i = 0;
-            cc_obj[i++] = "cc";
+            cc_obj[i++] = (char *)clang;
             cc_obj[i++] = "-c";
             cc_obj[i++] = "-fPIC";
+            cc_obj[i++] = "-isysroot";
+            cc_obj[i++] = (char *)sdk;
             cc_obj[i++] = "-I";
             cc_obj[i++] = (char *)tuDir;
             if (runtimeIncDir) {
@@ -515,6 +517,7 @@ int main(int argc, char **argv) {
         char link_cmd[PATH_MAX * 3];
         char runtimeLib[PATH_MAX];
         get_runtimelib(runtimeLib, sizeof(runtimeLib));
+        const char *clang_for_link = find_clang();
         snprintf(link_cmd, sizeof(link_cmd),
             "set -e; "
             "OBJS=$1/*.o; "
@@ -522,14 +525,14 @@ int main(int argc, char **argv) {
             "if [ -d \"$1/tmp/ffi-obj\" ] && ls \"$1/tmp/ffi-obj\"/*.o >/dev/null 2>&1; then "
             "  FFI_OBJS=$1/tmp/ffi-obj/*.o; "
             "fi; "
-            "cc $OBJS $FFI_OBJS "
+            "\"%s\" $OBJS $FFI_OBJS "
             "-isysroot %s "
             "%s"
             " -o $1/a.out "
             " -rdynamic "
             " -I%s "
             " -lffi -lpthread -lm",
-            sdk, runtimeLib, ffi_include);
+            clang_for_link, sdk, runtimeLib, ffi_include);
         
         char *link[] = {
             "sh", "-c",
