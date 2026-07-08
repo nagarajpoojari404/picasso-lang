@@ -39,7 +39,7 @@ func (t *TypeHandler) Size(_ *ir.Func, typeHandler *typedef.TypeHandler, module 
 	sizeVal := bh.N.NewPtrToInt(gep, types.I64)
 	slot := bh.V.NewAlloca(types.I64)
 	bh.N.NewStore(sizeVal, slot)
-	return &ints.Int32{
+	return &ints.Int64{
 		NativeType: types.I64,
 		Value:      slot,
 	}
