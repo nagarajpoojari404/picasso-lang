@@ -60,8 +60,10 @@ func (t *Interface) initRuntime(mod *ir.Module) {
 		ir.NewParam("index", types.I64),
 		ir.NewParam("sub_arr", types.NewPointer(t.Types[TYPE_ARRAY])))
 
-	// @string_alloc
-	t.Funcs[FUNC_STRING_ALLOC] = mod.NewFunc(FUNC_STRING_ALLOC, types.NewPointer(t.Types[TYPE_STRING]), ir.NewParam("", types.I32))
+	// @string_alloc — (const char* fmt, size_t size) -> string*
+	t.Funcs[FUNC_STRING_ALLOC] = mod.NewFunc(FUNC_STRING_ALLOC, types.NewPointer(t.Types[TYPE_STRING]),
+		ir.NewParam("fmt", types.NewPointer(types.I8)),
+		ir.NewParam("size", types.I64))
 	t.Funcs[FUNC_STRING_SUBSTRING] = mod.NewFunc(FUNC_STRING_SUBSTRING, types.NewPointer(t.Types[TYPE_STRING]), ir.NewParam("", types.NewPointer(t.Types[TYPE_STRING])), ir.NewParam("", types.I64), ir.NewParam("", types.I64))
 	t.Funcs[FUNC_STRING_FORMAT] = mod.NewFunc(FUNC_STRING_FORMAT, types.NewPointer(t.Types[TYPE_STRING]), ir.NewParam("", types.NewPointer(t.Types[TYPE_STRING])))
 	t.Funcs[FUNC_STRING_FORMAT].Sig.Variadic = true
