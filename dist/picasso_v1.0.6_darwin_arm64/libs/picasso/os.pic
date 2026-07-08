@@ -1,0 +1,273 @@
+using "builtin/os";
+using "builtin/syncio";
+using "builtin/array";
+using "builtin/strings";
+
+using "picasso/strings" as pstrings;
+
+class FileMode {
+
+    // stat mode bits (file types)
+    say IFREG:  int = os.S_IFREG;
+    say IFDIR:  int = os.S_IFDIR;
+    say IFCHR:  int = os.S_IFCHR;
+    say IFBLK:  int = os.S_IFBLK;
+    say IFIFO:  int = os.S_IFIFO;
+    say IFLNK:  int = os.S_IFLNK;
+    say IFSOCK: int = os.S_IFSOCK;
+
+    // owner permissions
+    say OWNER_READ:    int = os.S_IRUSR;
+    say OWNER_WRITE:   int = os.S_IWUSR;
+    say OWNER_EXECUTE: int = os.S_IXUSR;
+
+    // group permissions
+    say GROUP_READ:    int = os.S_IRGRP;
+    say GROUP_WRITE:   int = os.S_IWGRP;
+    say GROUP_EXECUTE: int = os.S_IXGRP;
+
+    // others permissions
+    say OTHER_READ:    int = os.S_IROTH;
+    say OTHER_WRITE:   int = os.S_IWOTH;
+    say OTHER_EXECUTE: int = os.S_IXOTH;
+
+    fn FileMode() {}
+}
+
+
+class FileSystem {
+    say internal PATH_MAX: int = 4096; 
+    fn FileSystem() {}
+
+    fn chdir(dir: string) {
+        os.chdir(dir);
+    }
+    fn getpwd(): string {
+        say buf: []uint8 = array.create(uint8, 256);
+        os.getcwd(buf, 256);
+        return buf;
+    }
+
+    fn chmod(name: string, mode: int):int {
+        return os.chmod(name, mode);
+    }
+
+    fn chown(name: string, uid: int, gid: int):int {
+        return os.chown(name, uid, gid);
+    }
+
+    fn mkdir(path: string, mode: int):int {
+        return os.mkdir(path, mode);
+    }
+
+    fn mkdirAll(path: string): int {
+        say n: int = strings.length(path);
+        if (n <= 0) {
+            return -1;
+        }
+
+        say tmp: []uint8 = array.create(uint8, this.PATH_MAX);
+        say sb: pstrings.StringBuilder = new pstrings.StringBuilder("");
+
+        // Standard mode: 0755 (Octal) = 493 (Decimal)
+        say defaultMode: int = 493;
+
+        foreach i in 0..n {
+            tmp[i] = strings.get(path, i);
+            if (tmp[i] == uint8(47) && i != 0) {
+                tmp[i] = uint8(0); // null terminate to isolate parent path
+                
+                // skip empty segments or "."
+                if (!(tmp[0] == uint8(0) || (tmp[0] == uint8(46) && tmp[1] == uint8(0)))) {
+                    sb.loadFromBuffer(tmp);
+                    
+                    // ff mkdir fails and it's NOT because it already exists, stop
+                    if (os.mkdir(sb.get(), defaultMode) == -1 && os.errno() != os.EEXIST) {
+                        return -1;
+                    }
+                }
+                
+                tmp[i] = uint8(47); // restore '/' for next segment
+            }
+        }
+
+        // create the final leaf directory (the full path)
+        sb.loadFromBuffer(tmp);
+        if (os.mkdir(sb.get(), defaultMode) == -1 && os.errno() != os.EEXIST) {
+            return -1;
+        }
+
+        return 0;
+    }
+
+    fn mkdirTemp(path: string, mode: int):int {
+        return os.mkdir_temp(path, mode);
+    }
+
+    fn removeDir(path: string): int {
+        return os.rmdir(path);
+    }
+
+    fn rename(oldPath: string, newPath: string): int {
+        return os.rename(oldPath, newPath);
+    }
+
+    fn link(oldPath: string, newPath: string): int {
+        return os.link(oldPath, newPath);
+    }
+
+    fn symlink(target: string, linkPath: string): int {
+        return os.link(target, linkPath);
+    }
+
+    fn readFile(path: string, mode: string): []uint8 {
+        // Open the file
+        say fd: string = syncio.fopen(path, mode);
+        if(fd == null) {
+            syncio.printf("Failed to open file: %s\n", path);
+            return null;
+        }
+        
+        // Read in chunks until EOF
+        say chunkSize: int = 4096;
+        say result: []uint8 = array.create(uint8, 0);
+        say totalRead: int = 0;
+        say offset: int = 0;
+        
+        while(1) {
+            // Allocate chunk buffer
+            say chunk: []uint8 = array.create(uint8, chunkSize);
+            if(chunk == null) {
+                syncio.printf("Failed to allocate chunk buffer\n");
+                syncio.fclose(fd);
+                return null;
+            }
+            
+            // Read chunk
+            say bytesRead: int = syncio.fread(fd, chunk, chunkSize, offset);
+            if(bytesRead < 0) {
+                syncio.printf("Failed to read file\n");
+                syncio.fclose(fd);
+                return null;
+            }
+            
+            // EOF reached
+            if(bytesRead == 0) {
+                break;
+            }
+            
+            // Append chunk to result
+            say i: int = 0;
+            while(i < bytesRead) {
+                array.append(result, chunk[i]);
+                i = i + 1;
+            }
+            
+            totalRead = totalRead + bytesRead;
+            offset = offset + bytesRead;
+            
+            // If we read less than chunk size, we've reached EOF
+            if(bytesRead < chunkSize) {
+                break;
+            }
+        }
+        
+        // Close file
+        syncio.fclose(fd);
+        return result;
+    }
+}
+
+class Process {
+    fn Process() {}
+
+
+    fn getPID(): int {
+        return os.getpid();
+    }
+
+    fn getParentProcessID(): int {
+        return os.getppid();
+    }
+
+    fn getSchedulerID(): int {
+        return os.gettid();
+    }
+
+    fn exit(code: int) {
+        os.exit(code);
+    }
+
+    fn fork(): int {
+        return os.fork();
+    }
+
+    // fn execve(): int
+
+    // fn execvp(): int
+
+    fn waitProcessID(pid: int, options: int): int {
+        return os.waitpid(pid, null, options);
+    }
+
+    fn kill(pid: int, signal: int): int {
+        return os.kill(pid, signal);
+    }
+
+    fn setProcessGID(pid: int, gid: int): int {
+        return os.setpgid(pid, gid);
+    }
+
+    fn getProcessGID(pid: int): int {
+        return os.getpgid(pid);
+    }
+
+    fn getProcessGroupID(): int {
+        return os.getpgrp();
+    }
+
+    fn createNewSession(): int {
+        return os.setsid();
+    }
+
+    fn getUserID(): int {
+        return os.getuid();
+    }
+
+    fn getEffectiveUserID(): int {
+        return os.geteuid();
+    }
+
+    fn getGroupID(): int {
+        return os.getgid();
+    }
+
+    fn getEffectiveGroupID(): int {
+        return os.getegid();
+    }
+
+    fn setUserID(uid: int): int {
+        return os.setuid(uid); 
+    }
+
+    fn setGroupID(gid: int): int {
+        return os.setgid(gid); 
+    }
+}
+
+
+class Env {
+    fn Env() {}
+
+    fn getEnv(key: string): string {
+        return os.getenv(key);
+    }
+
+    fn setEnv(key: string, value: string, overwrite: boolean): int {
+        return os.setenv(key, value, overwrite);
+    }
+
+    fn unsetEnv(key: string): int {
+        return os.unsetenv(key);
+    }
+}

@@ -1,0 +1,95 @@
+#include "platform/linux/os.h"
+
+/**
+ * Force references to all public OS wrapper functions so Clang/LLVM 
+ * emits the necessary declarations and symbols for FFI discovery.
+ */
+void* __ffi_force[] = {
+    /* Process Information & Control */
+    (void*)__public__os_errno,
+    (void*)__public__os_getpid,
+    (void*)__public__os_getppid,
+    (void*)__public__os_gettid,
+    (void*)__public__os_exit,
+    (void*)__public__os_fork,
+    (void*)__public__os_waitpid,
+    (void*)__public__os_kill,
+    (void*)__public__os_execve,
+    (void*)__public__os_execvp,
+
+    /* Environment & Identity */
+    (void*)__public__os_environ,
+    (void*)__public__os_getenv,
+    (void*)__public__os_setenv,
+    (void*)__public__os_unsetenv,
+    (void*)__public__os_getuid,
+    (void*)__public__os_geteuid,
+    (void*)__public__os_getgid,
+    (void*)__public__os_getegid,
+    (void*)__public__os_setuid,
+    (void*)__public__os_setgid,
+
+    /* Process Groups & Sessions */
+    (void*)__public__os_setpgid,
+    (void*)__public__os_getpgid,
+    (void*)__public__os_getpgrp,
+    (void*)__public__os_setsid,
+
+    /* Directory & Path Management */
+    (void*)__public__os_getcwd,
+    (void*)__public__os_chdir,
+    (void*)__public__os_chmod,
+    (void*)__public__os_chown,
+    (void*)__public__os_mkdir,
+    (void*)__public__os_mkdir_temp,
+    (void*)__public__os_rmdir,
+    (void*)__public__os_unlink,
+    (void*)__public__os_rename,
+    (void*)__public__os_renameat2,
+
+    /* Resource Limits & Signals */
+    (void*)__public__os_getrlimit,
+    (void*)__public__os_setrlimit,
+    (void*)__public__os_signal_install,
+
+    /* File I/O & Descriptors */
+    (void*)__public__os_open,
+    (void*)__public__os_close,
+    (void*)__public__os_read,
+    (void*)__public__os_write,
+    (void*)__public__os_lseek,
+    (void*)__public__os_fstat,
+    (void*)__public__os_dup,
+    (void*)__public__os_dup2,
+    (void*)__public__os_fcntl,
+
+    /* Filesystem Links & Metadata */
+    (void*)__public__os_link,
+    (void*)__public__os_symlink,
+    (void*)__public__os_readlink,
+    (void*)__public__os_stat,
+    (void*)__public__os_lstat,
+    (void*)__public__os_access,
+    (void*)__public__os_getdents64,
+
+    /* Memory Management */
+    (void*)__public__os_mmap,
+    (void*)__public__os_munmap,
+    (void*)__public__os_mprotect,
+    (void*)__public__os_madvise,
+    (void*)__public__os_mlock,
+    (void*)__public__os_munlock,
+    (void*)__public__os_mlockall,
+    (void*)__public__os_munlockall,
+    (void*)__public__os_page_size,
+
+    /* Futex (Synchronization) */
+    (void*)__public__os_futex_wait,
+    (void*)__public__os_futex_wake,
+    (void*)__public__os_futex_wait_bitset,
+    (void*)__public__os_futex_wake_bitset,
+    (void*)__public__os_futex_requeue,
+    (void*)__public__os_futex_cmp_requeue,
+    (void*)__public__os_futex_wake_one,
+    (void*)__public__os_futex_wake_all
+};

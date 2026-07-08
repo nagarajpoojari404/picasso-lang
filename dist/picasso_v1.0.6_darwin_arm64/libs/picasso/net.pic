@@ -1,0 +1,163 @@
+using "builtin/syncio";
+using "builtin/net" as netio;
+using "picasso/strings";
+using "builtin/array";
+
+class TCPConfig {
+    say backlog: int = 4096; // sending 0 allows to SOMAXCONN
+    
+    say closeOnExec: boolean = 1;
+    say reuseAddr: boolean = 1;
+    say reusePort: boolean = 1;
+    say tcpNoDelay: boolean = 0;
+    say tcpDeferAccept: boolean = 0;
+    say tcpFastOpen: boolean = 0; 
+    say keepConnAlive: boolean = 0;
+
+    say recvBuffer: int = 0;
+    say sendBuffer: int = 0;
+
+    say ipv6Only: boolean = 0; 
+
+    fn TCPConfig() {}
+}
+
+
+class TCPConn {
+    say internal addr: string;
+    say internal port: int16;
+    say internal fd: int;
+
+    fn TCPConn(addr: string, port: int16, fd: int) {
+        this.addr = addr;
+        this.port = port;
+        this.fd = fd;
+    }
+
+    fn write(buf: []uint8): int {
+        if(this.fd == -1) {
+            syncio.printf("fatal: trying to write on an unestablished conn");
+            return -1;
+        }
+        return netio.write(this.fd, buf, array.len(buf));
+    }
+
+    fn writeString(s: strings.StringBuilder) {
+        this.write(s.toBytes());
+    }
+
+    fn read(buf: []uint8, max: int): int {
+        if(this.fd == -1) {
+            syncio.printf("fatal: trying to read on an unestablished conn");
+            return -1;
+        }
+
+        if(max > array.len(buf)) {
+            syncio.printf("fatal: not enough space in buffer");
+        }
+
+        return netio.read(this.fd, buf, max);
+    }
+
+    fn readString(n: int): strings.StringBuilder {
+        say buf: []uint8 = array.create(uint8, n);
+
+        if (this.read(buf, n) != -1) {
+            say ret: strings.StringBuilder = new strings.StringBuilder("");
+            ret.loadFromBuffer(buf);
+            return ret;
+        }
+        return null;
+
+    } 
+}
+
+class TCPListener {
+    say internal addr: string;
+    say internal port: int16;
+    say internal listenFd: int;
+
+    fn TCPListener(addr: string, port: int16, fd: int) {
+        this.addr = addr;
+        this.port = port;
+        this.listenFd = fd;
+    }
+
+    fn accept(): net.TCPConn {
+        say fd: int = netio.accept(this.listenFd);
+        if(fd < 0){
+            syncio.printf("failed to start accpeting conn at %s:%d \n", this.addr, this.port);
+            return null;
+        }
+        return new net.TCPConn(this.addr, this.port, fd);
+    }
+}
+
+class TCPServer {
+    say conf: net.TCPConfig;
+    
+    fn TCPServer(conf: net.TCPConfig) {
+        if(conf == null) {
+            this.conf = new net.TCPConfig();
+        }else {
+            this.conf = conf;
+        }
+    }
+
+    fn listen(addr: string, port: int16): net.TCPListener {
+        say fd: int = netio.listen(
+            addr, 
+            port, 
+            this.conf.backlog,
+            this.conf.closeOnExec,
+            this.conf.reuseAddr,
+            this.conf.reusePort,
+            this.conf.tcpNoDelay,
+            this.conf.tcpDeferAccept,
+            this.conf.tcpFastOpen,
+            this.conf.keepConnAlive, 
+            this.conf.recvBuffer,
+            this.conf.sendBuffer,
+            this.conf.ipv6Only
+        );
+        if(fd < 0){
+            syncio.printf("failed to start listening at %s:%d \n", addr, port);
+            return null;
+        }else {
+            syncio.printf("started listening at %s:%d \n", addr, port);
+        }
+        return new net.TCPListener(addr, port, fd);
+    }
+}
+
+// class HTTPListener {
+//     say internal addr: string;
+//     say internal port: int16;
+//     say internal listenFd: int;
+
+//     fn HTTPListener(addr: string, port: int16, fd: int) {
+//         this.addr = addr;
+//         this.port = port;
+//         this.listenFd = fd;
+//     }
+
+//     fn accept(): net.TCPConn {
+//         say fd: int = netio.accept(this.listenFd);
+//         if(fd < 0){
+//             syncio.printf("failed to start accpeting conn at %s:%d \n", this.addr, this.port);
+//             return null;
+//         }
+//         return new net.TCPConn(this.addr, this.port, fd);
+//     }
+// }
+
+
+// class HTTPServer {
+//     fn HTTPServer() {
+
+//     }
+
+//     fn listen(addr: string, port: int16): net.HTTPListener {
+
+//     }
+// }

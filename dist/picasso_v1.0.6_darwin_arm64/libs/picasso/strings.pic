@@ -1,0 +1,78 @@
+using "builtin/strings" as _strings;
+using "builtin/array";
+using "builtin/syncio";
+
+class StringBuilder {
+    say internal s: string;
+    fn StringBuilder(s: string) {
+        this.s = s;
+    }
+
+    fn appendChar(ch: uint8) {
+        _strings.append(this.s, ch);
+    }
+
+    fn appendString(str: string) {
+        _strings.join(this.s, str);
+    }
+
+    fn appendInt(i: int) {
+        _strings.join(this.s, _strings.format("%d", i));
+    }
+
+    fn appendDouble(i: double) {
+        _strings.join(this.s, _strings.format("%f", i));
+    }
+
+    fn substring(start: int, end: int):string {
+        return _strings.substring(this.s, start, end);
+    }
+
+    fn split(t: string): []string {
+        say i: int = 0;
+        say n: int = _strings.length(this.s);
+        say m: int = _strings.length(t);
+        say ans: []string = array.create(string, 0);        
+        say last: int = 0;
+        while(i <= n-m) {
+            say j: int = 0;
+            while(j < m && _strings.get(this.s, i + j) == _strings.get(t, j)) {
+                j = j + 1;
+            }
+            if(j == m) {
+                array.append(ans, _strings.substring(this.s, last, i));                
+                last = i + m;
+            }
+            i = i + 1;
+        }
+
+        if(last < n) {
+            array.append(ans, _strings.substring(this.s, last, n));
+        }
+        return ans;
+    }
+
+    fn set(s: string) {
+        this.s = s;
+    }
+
+    fn getByte(i: int):uint8 {
+        return _strings.get(this.s, i);
+    }
+
+    fn loadFromBuffer(buf: []uint8) {
+        this.s = _strings.alloc_from_arr(buf);
+    }
+
+    fn toBytes():[]uint8 {
+        return _strings.get_bytes(this.s);
+    }
+
+    fn print() {
+        syncio.printf("%s \n", this.s);
+    }
+
+    fn get(): string {
+        return this.s;
+    }
+}
